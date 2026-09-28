@@ -5,9 +5,11 @@
 .venv/
 venv/
 env/
+
 __pycache__/
 *.py[cod]
 *.pyo
+
 .pytest_cache/
 .mypy_cache/
 .ruff_cache/
@@ -47,6 +49,7 @@ pnpm-debug.log*
 
 .DS_Store
 Thumbs.db
+
 .vscode/
 .idea/
 

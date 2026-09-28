@@ -15,10 +15,13 @@ function severityClass(severity: Incident["severity"]) {
   switch (severity) {
     case "SEV-1":
       return "border-red-500/30 bg-red-500/10 text-red-300";
+
     case "SEV-2":
       return "border-orange-500/30 bg-orange-500/10 text-orange-300";
+
     case "SEV-3":
       return "border-yellow-500/30 bg-yellow-500/10 text-yellow-300";
+
     default:
       return "border-blue-500/30 bg-blue-500/10 text-blue-300";
   }
@@ -28,15 +31,23 @@ function statusClass(status: Incident["status"]) {
   switch (status) {
     case "RESOLVED":
       return "border-emerald-500/30 bg-emerald-500/10 text-emerald-300";
+
     case "INVESTIGATING":
       return "border-yellow-500/30 bg-yellow-500/10 text-yellow-300";
+
     default:
       return "border-red-500/30 bg-red-500/10 text-red-300";
   }
 }
 
 function formatDate(value: string) {
-  return new Date(value).toLocaleString();
+  const date = new Date(value);
+
+  if (Number.isNaN(date.getTime())) {
+    return "Unknown";
+  }
+
+  return date.toLocaleString();
 }
 
 function cleanAiText(value: string) {
@@ -50,7 +61,7 @@ function recommendationItems(value: string) {
   const cleaned = cleanAiText(value);
 
   const items = cleaned
-    .split(/(?=\d+\.\s)/)
+    .split(/(?=\d+\.\s+)/)
     .map((item) => item.trim())
     .filter(Boolean);
 
@@ -98,8 +109,15 @@ export default async function IncidentDetailsPage({
     resolution,
   } = data;
 
-  // Remove duplicate Hindsight memories while keeping
-  // the highest-scoring version of each memory.
+  /*
+   * Defensive frontend deduplication.
+   *
+   * The backend already keeps one memory per historical source incident.
+   * This additional layer prevents duplicate text from appearing in the UI
+   * if the API ever returns repeated memories.
+   *
+   * When duplicates exist, keep the version with the highest relevance score.
+   */
   const memoryMap = new Map<
     string,
     (typeof rawMemories)[number]
@@ -127,7 +145,6 @@ export default async function IncidentDetailsPage({
   return (
     <main className="min-h-screen">
       <div className="mx-auto max-w-6xl px-6 py-8 lg:px-8">
-
         {/* Header */}
         <div className="mb-8">
           <Link
@@ -216,7 +233,7 @@ export default async function IncidentDetailsPage({
           </div>
         </section>
 
-        {/* Actions */}
+        {/* Incident actions */}
         <section className="mt-8">
           <IncidentActions
             incidentId={incident.id}
@@ -284,7 +301,7 @@ export default async function IncidentDetailsPage({
                   {recommendationItems(
                     analysis.recommended_action,
                   ).map((item, index) => {
-                    const text = item.replace(/^\d+\.\s*/, "");
+                    const text = item.replace(/^\d+\.\s+/, "");
 
                     return (
                       <div
@@ -391,7 +408,7 @@ export default async function IncidentDetailsPage({
                         </div>
                       </div>
 
-                      {memory.score !== null && (
+                      {memory.score != null && (
                         <div className="min-w-[150px]">
                           <div className="flex items-center justify-between gap-3">
                             <span className="text-[11px] uppercase tracking-wider text-slate-600">
@@ -531,7 +548,7 @@ export default async function IncidentDetailsPage({
           )}
         </section>
 
-        {/* Memory loop */}
+        {/* Memory Loop */}
         <section className="mt-8 mb-12 rounded-2xl border border-white/10 bg-black/20 p-6">
           <h2 className="text-lg font-semibold text-white">
             Memory Loop

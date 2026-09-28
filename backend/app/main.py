@@ -1,3 +1,5 @@
+import os
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -11,11 +13,31 @@ app = FastAPI(
 )
 
 
+def get_allowed_origins() -> list[str]:
+    """
+    Return allowed frontend origins from the environment.
+
+    Multiple origins can be provided as a comma-separated value.
+    localhost is kept as a default for local development.
+    """
+
+    configured_origins = os.getenv(
+        "FRONTEND_URLS",
+        "http://localhost:3000",
+    )
+
+    origins = [
+        origin.strip().rstrip("/")
+        for origin in configured_origins.split(",")
+        if origin.strip()
+    ]
+
+    return origins
+
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "http://localhost:3000",
-    ],
+    allow_origins=get_allowed_origins(),
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -30,7 +52,9 @@ def root() -> dict[str, str]:
     return {
         "name": "OpsMemory",
         "version": "0.1.0",
-        "description": "Memory-powered DevOps Incident Response Agent",
+        "description": (
+            "Memory-powered DevOps Incident Response Agent"
+        ),
     }
 
 

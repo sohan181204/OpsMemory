@@ -1,6 +1,6 @@
 from uuid import UUID
 
-from fastapi import APIRouter, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status
 
 from backend.app.schemas.incident import (
     IncidentAnalysisResponse,
@@ -11,12 +11,14 @@ from backend.app.schemas.incident import (
     IncidentResolve,
     IncidentResponse,
 )
+from backend.app.security import require_api_key
 from backend.app.services.incident_service import IncidentService
 
 
 router = APIRouter(
     prefix="/api/incidents",
     tags=["Incidents"],
+    dependencies=[Depends(require_api_key)],
 )
 
 incident_service = IncidentService()
@@ -37,7 +39,7 @@ def create_incident(
     """Create a new incident."""
 
     return incident_service.create_incident(
-        incident_data
+        incident_data,
     )
 
 
@@ -70,7 +72,7 @@ def get_incident_details(
     """Return complete incident details."""
 
     details = incident_service.get_incident_details(
-        incident_id
+        incident_id,
     )
 
     if details is None:
@@ -96,7 +98,7 @@ def get_incident(
     """Return one incident by ID."""
 
     incident = incident_service.get_incident(
-        incident_id
+        incident_id,
     )
 
     if incident is None:
@@ -122,7 +124,7 @@ def analyze_incident(
     """Analyze an incident using historical Hindsight memory."""
 
     analysis = incident_service.analyze_incident(
-        incident_id
+        incident_id,
     )
 
     if analysis is None:

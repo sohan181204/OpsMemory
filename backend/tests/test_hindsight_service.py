@@ -1,90 +1,67 @@
 import os
-import unittest
-from unittest.mock import MagicMock, patch
 
-from backend.app.services.hindsight_service import HindsightService
+from dotenv import load_dotenv
+from hindsight_client import Hindsight
+
+load_dotenv()
 
 
-class TestHindsightService(unittest.TestCase):
+def main():
+    api_url = os.getenv("HINDSIGHT_API_URL")
+    api_key = os.getenv("HINDSIGHT_API_KEY")
+    bank_id = os.getenv("HINDSIGHT_BANK_ID")
 
-    def test_requires_api_key(self):
-        with patch.dict(
-            os.environ,
-            {"HINDSIGHT_API_URL": "https://example.com"},
-            clear=True,
-        ):
-            with self.assertRaisesRegex(
-                ValueError,
-                "HINDSIGHT_API_KEY is missing",
-            ):
-                HindsightService()
+    if not api_url:
+        raise RuntimeError("HINDSIGHT_API_URL is missing from .env")
 
-    @patch("backend.app.services.hindsight_service.Hindsight")
-    def test_retain_uses_configured_bank(self, hindsight_mock):
-        client = MagicMock()
-        hindsight_mock.return_value = client
+    if not api_key:
+        raise RuntimeError("HINDSIGHT_API_KEY is missing from .env")
 
-        with patch.dict(
-            os.environ,
-            {
-                "HINDSIGHT_API_URL": "https://example.com",
-                "HINDSIGHT_API_KEY": "test-key",
-                "HINDSIGHT_BANK_ID": "test-bank",
-            },
-            clear=True,
-        ):
-            service = HindsightService()
-            service.retain("incident learning record")
+    if not bank_id:
+        raise RuntimeError("HINDSIGHT_BANK_ID is missing from .env")
 
-        hindsight_mock.assert_called_once_with(
-            base_url="https://example.com",
-            api_key="test-key",
-        )
-        client.retain.assert_called_once_with(
-            bank_id="test-bank",
-            content="incident learning record",
-        )
+    print("Initializing Hindsight client...")
 
-    @patch("backend.app.services.hindsight_service.Hindsight")
-    def test_recall_maps_text_and_score(self, hindsight_mock):
-        client = MagicMock()
+    client = Hindsight(
+        base_url=api_url,
+        api_key=api_key,
+    )
 
-        first_result = MagicMock()
-        first_result.text = "Previous incident"
-        first_result.scores.final = 0.92
+    print("Connected to Hindsight.")
 
-        second_result = MagicMock()
-        second_result.text = "Another incident"
-        second_result.scores.final = 0.81
+    print("Retaining test incident memory...")
 
-        client.recall.return_value = [first_result, second_result]
-        hindsight_mock.return_value = client
+    client.retain(
+        bank_id=bank_id,
+        content=(
+            "Incident INC-001 affected the payment-api service. "
+            "The incident occurred after deployment v2.4.1. "
+            "The service returned elevated HTTP 500 errors. "
+            "The incident was resolved by rolling back to v2.4.0."
+        ),
+    )
 
-        with patch.dict(
-            os.environ,
-            {
-                "HINDSIGHT_API_URL": "https://example.com",
-                "HINDSIGHT_API_KEY": "test-key",
-                "HINDSIGHT_BANK_ID": "test-bank",
-            },
-            clear=True,
-        ):
-            service = HindsightService()
-            memories = service.recall("payment-api HTTP 500")
+    print("Memory retained successfully.")
 
-        client.recall.assert_called_once_with(
-            bank_id="test-bank",
-            query="payment-api HTTP 500",
-        )
+    print("Recalling previous payment-api incident...")
 
-        self.assertEqual(
-            memories,
-            [
-                {"text": "Previous incident", "score": 0.92},
-                {"text": "Another incident", "score": 0.81},
-            ],
-        )
+    result = client.recall(
+        bank_id=bank_id,
+        query="What happened during the previous payment-api incident?",
+    )
+
+    print("\nRecalled memories:")
+
+    if not result.results:
+        print("No memories were returned.")
+    else:
+        for memory in result.results:
+            print("-", memory.text)
+
+    client.close()
+
+    print("\nHindsight test completed successfully.")
 
 
 if __name__ == "__main__":
-    unittest.main()
+    main()

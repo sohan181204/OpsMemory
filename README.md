@@ -2,6 +2,16 @@
 
 ## AI Incident Response Agent That Learns From Every Incident
 
+OpsMemory is a hackathon-ready incident response platform that combines AI reasoning with persistent operational memory. It demonstrates how confirmed incident outcomes can improve the analysis of similar incidents over time.
+
+## Live Demo
+
+- **Frontend:** https://ops-memory-psi.vercel.app/
+- **Backend API:** https://opsmemory-myoq.onrender.com/
+- **Health:** https://opsmemory-myoq.onrender.com/health
+
+> Demo flow: **v3.2.0 → v3.3.0 → v3.4.0**. The first incident establishes the operational lesson; later incidents recall earlier confirmed outcomes through Hindsight.
+
 OpsMemory is a memory-powered AI incident response platform for recurring production incidents.
 
 Instead of treating every incident as a new problem, OpsMemory recalls relevant historical incident experience, gives that context to an AI reasoning step, keeps remediation under human control, and turns the confirmed outcome into long-term operational memory.
@@ -332,27 +342,15 @@ python scripts/seed_demo_database.py
 
 The demo incidents are:
 
-- v3.2.0
-- v3.3.0
-- v3.4.0
+- v3.2.0 — first incident; no prior historical memory
+- v3.3.0 — recalls the v3.2.0 confirmed outcome
+- v3.4.0 — recalls the v3.3.0 and v3.2.0 confirmed outcomes
 
-The Hindsight seeding script is also included for setting up the demonstration memory bank:
-
-```bash
-python scripts/seed_memory.py
-```
-
-Use the memory seeding script only when initializing a clean demonstration memory bank. Re-running it against an already seeded bank can create duplicate memories.
+For local development, use a clean Hindsight demonstration bank when initializing external memory. Avoid repeatedly seeding an already-populated bank, because duplicate memories can be created.
 
 ## Verifying the Memory Timeline
 
-Run:
-
-```bash
-python scripts/verify_memory.py
-```
-
-The verification checks that recalled memories can be mapped to known incidents and that only earlier incidents are accepted into the analysis context.
+The backend also contains automated checks for chronological memory filtering, source-aware deduplication, AI output parsing, and incident lifecycle behavior.
 
 ## Testing
 
@@ -411,7 +409,23 @@ The postmortem captures the confirmed cause, resolution, and lesson before the k
 
 ✅ Hackathon MVP — Demo Ready
 
-The core incident-response and hindsight-learning workflow is implemented and validated locally.
+The core incident-response and Hindsight-learning workflow is implemented, validated, and publicly deployed.
+
+### Verified demo behavior
+
+```text
+v3.2.0  →  0 historical memories
+v3.3.0  →  1 historical memory  (v3.2.0)
+v3.4.0  →  2 historical memories (v3.3.0 + v3.2.0)
+```
+
+The UI includes a **Memory Impact** section that makes the connection between recalled historical experience and AI reasoning explicit, while keeping remediation under human control.
+
+## Security Notes
+
+- Do not commit `.env` files or API keys.
+- Backend API authentication is available through `API_AUTH_ENABLED=true` and `API_KEY` for deployments that require it.
+- Historical incident content is treated as untrusted evidence during AI analysis rather than as executable instructions.
 
 ## Future Scope
 

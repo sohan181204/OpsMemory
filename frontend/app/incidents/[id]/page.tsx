@@ -61,7 +61,7 @@ function recommendationItems(value: string) {
   const cleaned = cleanAiText(value);
 
   const items = cleaned
-    .split(/\r?\n(?=\s*\d+\.\s+)/)
+    .split(/\s+(?=\d+\.\s+)/)
     .map((item) => item.trim())
     .filter(Boolean);
 

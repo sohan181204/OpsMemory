@@ -224,6 +224,7 @@ OpsMemory/
 │   │   ├── db/
 │   │   ├── routes/
 │   │   ├── schemas/
+│   │   ├── security.py
 │   │   └── services/
 │   │       ├── hindsight_service.py
 │   │       ├── incident_service.py
@@ -237,8 +238,8 @@ OpsMemory/
 │
 ├── scripts/
 │   ├── seed_demo_database.py
-│   ├── seed_memory.py
-│   └── verify_memory.py
+│   └── manual/
+│       └── list_hindsight_banks.py
 │
 ├── .env.example
 ├── .gitignore

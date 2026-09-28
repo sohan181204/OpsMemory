@@ -52,7 +52,11 @@ function formatDate(value: string) {
 
 function cleanAiText(value: string) {
   return value
-    .replace(/\*\*/g, "")
+    .replace(/\*\*(.*?)\*\*/g, "$1")
+    .replace(/\*(.*?)\*/g, "$1")
+    .replace(/__(.*?)__/g, "$1")
+    .replace(/(?<!\w)_(.*?)_(?!\w)/g, "$1")
+    .replace(/`([^`]+)`/g, "$1")
     .replace(/^#+\s*/gm, "")
     .trim();
 }
@@ -68,6 +72,35 @@ function recommendationItems(value: string) {
   return items.length > 1 ? items : [cleaned];
 }
 
+function extractDeploymentVersion(value: string) {
+  const patterns = [
+    /\bdeployment\s+(v\d+(?:\.\d+){1,3})\b/i,
+    /\bversion\s+(v\d+(?:\.\d+){1,3})\b/i,
+  ];
+
+  for (const pattern of patterns) {
+    const match = value.match(pattern);
+
+    if (match?.[1]) {
+      return match[1];
+    }
+  }
+
+  return "Historical incident";
+}
+
+function extractResolution(value: string) {
+  const match = value.match(
+    /\bresolved by\s+(.+?)(?:\.|$)/i,
+  );
+
+  if (match?.[1]) {
+    return `${match[1].trim()}.`;
+  }
+
+  return "Recorded resolution available in historical memory.";
+}
+
 function EmptyState({
   title,
   description,
@@ -77,7 +110,9 @@ function EmptyState({
 }) {
   return (
     <div className="rounded-xl border border-dashed border-white/10 bg-black/20 p-6">
-      <p className="font-medium text-slate-300">{title}</p>
+      <p className="font-medium text-slate-300">
+        {title}
+      </p>
 
       <p className="mt-2 text-sm leading-6 text-slate-500">
         {description}
@@ -257,8 +292,8 @@ export default async function IncidentDetailsPage({
             </div>
 
             <p className="mt-2 text-sm text-slate-500">
-              Analysis generated using the current incident and recalled
-              operational memory.
+              Analysis generated using the current incident and
+              recalled operational memory.
             </p>
           </div>
 
@@ -301,7 +336,10 @@ export default async function IncidentDetailsPage({
                   {recommendationItems(
                     analysis.recommended_action,
                   ).map((item, index) => {
-                    const text = item.replace(/^\d+\.\s+/, "");
+                    const text = item.replace(
+                      /^\d+\.\s+/,
+                      "",
+                    );
 
                     return (
                       <div
@@ -323,6 +361,146 @@ export default async function IncidentDetailsPage({
             </div>
           )}
         </section>
+
+        {/* Memory Impact */}
+        {analysis && memories.length > 0 && (
+          <section className="mt-8 overflow-hidden rounded-2xl border border-violet-500/20 bg-gradient-to-br from-violet-500/[0.08] via-white/[0.02] to-black/20">
+            <div className="border-b border-white/10 p-6">
+              <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+                <div>
+                  <div className="flex items-center gap-3">
+                    <div className="flex h-9 w-9 items-center justify-center rounded-xl border border-violet-400/20 bg-violet-500/10 text-sm font-bold text-violet-300">
+                      🧠
+                    </div>
+
+                    <div>
+                      <p className="text-xs font-semibold uppercase tracking-[0.18em] text-violet-300">
+                        MEMORY IMPACT
+                      </p>
+
+                      <h2 className="mt-1 text-xl font-semibold text-white">
+                        How prior incidents influenced this analysis
+                      </h2>
+                    </div>
+                  </div>
+
+                  <p className="mt-3 max-w-3xl text-sm leading-6 text-slate-400">
+                    {memories.length} historical{" "}
+                    {memories.length === 1
+                      ? "experience was"
+                      : "experiences were"}{" "}
+                    recalled from Hindsight and supplied to the AI as
+                    evidence for the current investigation.
+                  </p>
+                </div>
+
+                <div className="flex shrink-0 items-center gap-2 self-start rounded-full border border-violet-400/20 bg-violet-500/10 px-3 py-1.5 text-xs font-medium text-violet-300">
+                  <span className="h-1.5 w-1.5 rounded-full bg-violet-300" />
+                  {memories.length}{" "}
+                  {memories.length === 1 ? "memory" : "memories"}{" "}
+                  → AI reasoning
+                </div>
+              </div>
+            </div>
+
+            <div className="p-6">
+              <div className="grid gap-4 md:grid-cols-2">
+                {memories.map((memory, index) => {
+                  const deployment = extractDeploymentVersion(
+                    memory.text,
+                  );
+
+                  const historicalResolution =
+                    extractResolution(memory.text);
+
+                  return (
+                    <div
+                      key={`memory-impact-${index}-${memory.text}`}
+                      className="rounded-2xl border border-white/10 bg-black/20 p-5"
+                    >
+                      <div className="flex items-start justify-between gap-4">
+                        <div className="flex items-center gap-3">
+                          <div className="flex h-8 w-8 items-center justify-center rounded-lg border border-violet-400/20 bg-violet-500/10 text-xs font-bold text-violet-300">
+                            {String(index + 1).padStart(2, "0")}
+                          </div>
+
+                          <div>
+                            <p className="text-xs font-semibold uppercase tracking-wider text-violet-300">
+                              Historical experience
+                            </p>
+
+                            <p className="mt-1 text-xs text-slate-600">
+                              Recalled from long-term memory
+                            </p>
+                          </div>
+                        </div>
+
+                        {memory.score != null && (
+                          <span className="font-mono text-xs text-violet-300">
+                            {memory.score.toFixed(3)}
+                          </span>
+                        )}
+                      </div>
+
+                      <div className="mt-5 grid gap-3 sm:grid-cols-2">
+                        <div className="rounded-xl border border-white/5 bg-white/[0.025] p-4">
+                          <p className="text-[11px] font-semibold uppercase tracking-wider text-slate-600">
+                            Previous deployment
+                          </p>
+
+                          <p className="mt-2 font-mono text-sm font-semibold text-white">
+                            {deployment}
+                          </p>
+                        </div>
+
+                        <div className="rounded-xl border border-emerald-500/10 bg-emerald-500/[0.025] p-4">
+                          <p className="text-[11px] font-semibold uppercase tracking-wider text-slate-600">
+                            Recorded resolution
+                          </p>
+
+                          <p className="mt-2 text-sm leading-6 text-slate-300">
+                            {historicalResolution}
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="mt-4 rounded-xl border border-white/5 bg-white/[0.02] p-4">
+                        <p className="text-[11px] font-semibold uppercase tracking-wider text-slate-600">
+                          Evidence supplied to AI
+                        </p>
+
+                        <p className="mt-2 text-sm leading-6 text-slate-400">
+                          {memory.text}
+                        </p>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+
+              <div className="mt-5 rounded-2xl border border-violet-400/10 bg-violet-500/[0.035] p-5">
+                <div className="flex items-start gap-3">
+                  <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-violet-500/10 text-violet-300">
+                    →
+                  </div>
+
+                  <div>
+                    <p className="text-sm font-semibold text-violet-200">
+                      Memory → Reasoning
+                    </p>
+
+                    <p className="mt-1 text-sm leading-6 text-slate-500">
+                      Previous incident outcomes give the AI historical
+                      evidence to compare against the current failure.
+                      The human operator still validates the evidence and
+                      confirms the actual remediation.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </section>
+        )}
 
         {/* Hindsight Memories */}
         <section className="mt-8 overflow-hidden rounded-2xl border border-violet-500/20 bg-gradient-to-br from-violet-500/[0.07] via-white/[0.02] to-black/20">

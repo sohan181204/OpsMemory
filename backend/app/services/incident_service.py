@@ -203,6 +203,8 @@ class IncidentService:
         Recall Hindsight memories and keep only memories whose source
         incident occurred before the incident currently being analyzed.
 
+        Only one memory is kept per historical source incident.
+
         Unknown-source memories are excluded because they cannot be
         safely placed in the incident timeline.
         """
@@ -219,7 +221,7 @@ class IncidentService:
         recalled = self.hindsight.recall(query)
 
         unique_memories: list[dict] = []
-        seen_texts: set[str] = set()
+        seen_source_incidents: set[UUID] = set()
 
         for memory in recalled:
             text = memory["text"].strip()
@@ -231,10 +233,8 @@ class IncidentService:
             # Resolve the memory back to its source incident.
             # ----------------------------------------------------------
 
-            source_incident = (
-                self._find_memory_source_incident(
-                    text
-                )
+            source_incident = self._find_memory_source_incident(
+                text
             )
 
             # We only trust memories whose source can be identified.
@@ -244,23 +244,26 @@ class IncidentService:
             # ----------------------------------------------------------
             # Chronological rule:
             #
-            # source incident must be older than current incident.
+            # The source incident must be older than the
+            # incident currently being analyzed.
             # ----------------------------------------------------------
 
-            if (
-                source_incident.created_at
-                >= incident.created_at
-            ):
+            if source_incident.created_at >= incident.created_at:
                 continue
 
-            normalized_text = " ".join(
-                text.split()
-            ).lower()
+            # ----------------------------------------------------------
+            # Incident-level deduplication:
+            #
+            # Hindsight may return multiple memories describing
+            # the same historical incident. Keep only one.
+            # ----------------------------------------------------------
 
-            if normalized_text in seen_texts:
+            source_id = source_incident.id
+
+            if source_id in seen_source_incidents:
                 continue
 
-            seen_texts.add(normalized_text)
+            seen_source_incidents.add(source_id)
 
             unique_memories.append(
                 {
@@ -269,6 +272,7 @@ class IncidentService:
                 }
             )
 
+            # Limit the amount of historical context.
             if len(unique_memories) >= 5:
                 break
 
@@ -355,7 +359,7 @@ class IncidentService:
         self,
         incident_id: UUID,
     ) -> IncidentAnalysisResponse | None:
-        """Analyze an incident using historical Hindsight memory and Groq."""
+        """Analyze an incident using historical Hindsight memory and LLM."""
 
         incident = self.get_incident(incident_id)
 
@@ -734,9 +738,7 @@ incident history during investigation and remediation.
             analysis_response = None
 
             if analysis is not None:
-                analysis_created_at = (
-                    analysis.created_at
-                )
+                analysis_created_at = analysis.created_at
 
                 if analysis_created_at.tzinfo is None:
                     analysis_created_at = (

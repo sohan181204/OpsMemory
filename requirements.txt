@@ -6,4 +6,4 @@ python-dotenv
 httpx
 hindsight-client
 SQLAlchemy
-openai
+openaipytest

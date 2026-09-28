@@ -61,7 +61,7 @@ function recommendationItems(value: string) {
   const cleaned = cleanAiText(value);
 
   const items = cleaned
-    .split(/(?=\d+\.\s+)/)
+    .split(/\r?\n(?=\s*\d+\.\s+)/)
     .map((item) => item.trim())
     .filter(Boolean);
 
@@ -358,7 +358,7 @@ export default async function IncidentDetailsPage({
               </div>
             </div>
 
-            {analysis && (
+            {analysis && memories.length > 0 && (
               <div className="mt-5 flex items-center gap-3 rounded-xl border border-violet-400/15 bg-black/20 px-4 py-3">
                 <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-violet-500/10 text-violet-300">
                   🧠

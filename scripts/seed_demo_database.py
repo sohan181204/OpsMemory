@@ -47,13 +47,14 @@ DEMO_INCIDENTS = [
             "probable_cause": (
                 "A regression or configuration issue introduced "
                 "by deployment v3.2.0 is the likely cause based "
-                "on the observed timing and symptoms."
+                "on the observed timing and symptoms. No earlier "
+                "incident memory is available for this first event."
             ),
             "recommended_action": (
                 "Compare the v3.2.0 release with the previous stable "
                 "version, inspect the relevant logs and configuration, "
-                "and consider rollback if the release is confirmed "
-                "as the source of the regression."
+                "and prepare a controlled rollback if the release is "
+                "confirmed as the source of the regression."
             ),
         },
         "postmortem": {
